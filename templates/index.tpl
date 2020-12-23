@@ -1,5 +1,5 @@
 {strip}
-    {assign var="pageTitle" value="plugins.importexport.datacite.displayName"}
+    {assign var="pageTitle" value="plugins.importexport.crossref.displayName"}
     {include file="common/header.tpl"}
 {/strip}
 <script type="text/javascript">
@@ -11,17 +11,17 @@
 </script>
 <div id="importExportTabs" class="pkp_controllers_tab">
     <ul>
-        <li><a href="#queue-tab">{translate key="plugins.importexport.datacite.queued"}</a></li>
-        <li><a href="#deposited-tab">{translate key="plugins.importexport.datacite.deposited"}</a></li>
-        <li><a href="#settings-tab">{translate key="plugins.importexport.datacite.settings"}</a></li>
+        <li><a href="#queue-tab">{translate key="plugins.importexport.crossref.queued"}</a></li>
+        <li><a href="#deposited-tab">{translate key="plugins.importexport.crossref.deposited"}</a></li>
+        <li><a href="#settings-tab">{translate key="plugins.importexport.crossref.settings"}</a></li>
     </ul>
     <div id="settings-tab">
         <script type="text/javascript">
 			$(function () {ldelim}
-				$('#dataciteSettingsForm').pkpHandler('$.pkp.controllers.form.FormHandler');
+				$('#crossrefSettingsForm').pkpHandler('$.pkp.controllers.form.FormHandler');
                 {rdelim});
         </script>
-        <form class="pkp_form" id="dataciteSettingsForm" method="post"
+        <form class="pkp_form" id="crossrefSettingsForm" method="post"
               action="{plugin_url path="settings" verb="save"}">
             {if $doiPluginSettingsLinkAction}
                 {fbvFormArea id="doiPluginSettingsLink"}
@@ -30,26 +30,23 @@
                 {/fbvFormSection}
                 {/fbvFormArea}
             {/if}
-            {fbvFormArea id="dataciteSettingsFormArea"}
-                <p class="pkp_help">{translate key="plugins.importexport.datacite.settings.description"}</p>
-                <p class="pkp_help">{translate key="plugins.importexport.datacite.intro"}</p>
-			{fbvFormSection list="true"}
-			{fbvElement type="checkbox" id="daraMode" label="plugins.importexport.datacite.settings.form.dara" checked=$daraMode|compare:true}
-			{/fbvFormSection}
+            {fbvFormArea id="crossrefSettingsFormArea"}
+                <p class="pkp_help">{translate key="plugins.importexport.crossref.settings.description"}</p>
+                <p class="pkp_help">{translate key="plugins.importexport.crossref.intro"}</p>
 			{fbvFormSection}
-            {fbvElement type="text" id="api" value=$api label="plugins.importexport.datacite.settings.form.url" maxlength="100" size=$fbvStyles.size.MEDIUM}
-            {fbvElement type="text" id="username" value=$username label="plugins.importexport.datacite.settings.form.username" maxlength="50" size=$fbvStyles.size.MEDIUM}
-            {fbvElement type="text" password="true" id="password" value=$password label="plugins.importexport.datacite.settings.form.password" maxLength="50" size=$fbvStyles.size.MEDIUM}
-                <span class="instruct">{translate key="plugins.importexport.datacite.settings.form.password.description"}</span>
+            {fbvElement type="text" id="api" value=$api label="plugins.importexport.crossref.settings.form.url" maxlength="100" size=$fbvStyles.size.MEDIUM}
+            {fbvElement type="text" id="username" value=$username label="plugins.importexport.crossref.settings.form.username" maxlength="50" size=$fbvStyles.size.MEDIUM}
+            {fbvElement type="text" password="true" id="password" value=$password label="plugins.importexport.crossref.settings.form.password" maxLength="50" size=$fbvStyles.size.MEDIUM}
+                <span class="instruct">{translate key="plugins.importexport.crossref.settings.form.password.description"}</span>
                 <br/>
             {/fbvFormSection}
                 <hr>
             {fbvFormSection list="true"}
-            {fbvElement type="checkbox" id="testMode" label="plugins.importexport.datacite.settings.form.testMode.description" checked=$testMode|compare:true}
+            {fbvElement type="checkbox" id="testMode" label="plugins.importexport.crossref.settings.form.testMode.description" checked=$testMode|compare:true}
             {/fbvFormSection}
-            {fbvElement type="text" id="testRegistry" value=$testRegistry label="plugins.importexport.datacite.settings.form.testRegistry" maxlength="200" size=$fbvStyles.size.MEDIUM}
-            {fbvElement type="text" id="testPrefix" value=$testPrefix label="plugins.importexport.datacite.settings.form.testPrefix" maxlength="10" size=$fbvStyles.size.MEDIUM}
-            {fbvElement type="text" id="testUrl" value=$testUrl label="plugins.importexport.datacite.settings.form.testUrl" maxlength="200" size=$fbvStyles.size.MEDIUM}
+            {fbvElement type="text" id="testRegistry" value=$testRegistry label="plugins.importexport.crossref.settings.form.testRegistry" maxlength="200" size=$fbvStyles.size.MEDIUM}
+            {fbvElement type="text" id="testPrefix" value=$testPrefix label="plugins.importexport.crossref.settings.form.testPrefix" maxlength="10" size=$fbvStyles.size.MEDIUM}
+            {fbvElement type="text" id="testUrl" value=$testUrl label="plugins.importexport.crossref.settings.form.testUrl" maxlength="200" size=$fbvStyles.size.MEDIUM}
             {/fbvFormArea}
             {fbvFormButtons submitText="common.save"}
         </form>
