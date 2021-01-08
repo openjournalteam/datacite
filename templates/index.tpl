@@ -64,7 +64,7 @@
                                         <li class="pkpListPanelItem pkpListPanelItem--submission pkpListPanelItem--hasSummary">
                                             <div class="pkpListPanelItem__summary -pkpClearfix">
                                                 <div class="pkpListPanelItem--submission__item">
-                                                        <div class="pkpListPanelItem--submission__id">{$item["id"]}</div>
+                                                    <div class="pkpListPanelItem--submission__id">{$item["id"]}</div>
                                                     <div class="pkpListPanelItem--submission__reviewerWorkflowLink"><span
                                                                 class="-screenReader">ID</span>
 
@@ -74,7 +74,10 @@
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__title">
                                                         {$item["title"]}<br />
-                                                        DOI: {$item["pubId"]} {translate key="plugins.importexport.crossref.chapterDoiCount"}:  {$item["chapterPubIds"]|count}
+                                                        DOI: {$item["pubId"]}<br />
+                                                        {if $item["chapterPubIds"]}
+                                                            {translate key="plugins.importexport.crossref.chapterDoiCount"}:  {$item["chapterPubIds"]|count}
+                                                        {/if}
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__activity">
                                                         {if $item["notices"]}   
@@ -92,7 +95,7 @@
                                                 <div class="pkpListPanelItem--submission__stage">
                                                     <div class="pkpListPanelItem--submission__stageRow">
                                                         {if !$item["errors"]} 
-                                                        <button class="pkpBadge pkpBadge--button pkpBadge--dot pkpBadge--submission">
+                                                        <button class="pkpBadge pkpBadge--button pkpBadge--dot">
                                                             <a href="{$plugin}/export?submission={$item["id"]}" class="">
                                                                 {translate key="plugins.importexport.crossref.deposit"}
                                                             </a>
@@ -136,17 +139,20 @@
                                         <li class="pkpListPanelItem pkpListPanelItem--submission pkpListPanelItem--hasSummary">
                                             <div class="pkpListPanelItem__summary -pkpClearfix">
                                                 <div class="pkpListPanelItem--submission__item">
-                                                    <a href="{$plugin}/export?submission={$item["id"]}&redeposit=1" class=""><div class="pkpListPanelItem--submission__id"><span aria-hidden="false" class="fa fa-angle-up"></span></div></a>
+                                                    <div class="pkpListPanelItem--submission__id">{$item["id"]}</div>
                                                     <div class="pkpListPanelItem--submission__reviewerWorkflowLink"><span
                                                                 class="-screenReader">ID</span>
-                                                        {$item["id"]}
+
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__author">
                                                         {$item["authors"]}
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__title">
                                                         {$item["title"]}<br />
-                                                        DOI: {$item["pubId"]} {translate key="plugins.importexport.crossref.chapterDoiCount"}:  {$item["chapterPubIds"]|count}
+                                                        DOI: {$item["pubId"]}<br />
+                                                        {if $item["chapterPubIds"]}
+                                                            {translate key="plugins.importexport.crossref.chapterDoiCount"}:  {$item["chapterPubIds"]|count}
+                                                        {/if}
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__activity">
                                                         {if $item["notices"]}   
@@ -164,9 +170,9 @@
                                                 <div class="pkpListPanelItem--submission__stage">
                                                     <div class="pkpListPanelItem--submission__stageRow">
                                                         {if !$item["errors"]} 
-                                                        <button class="pkpBadge pkpBadge--button pkpBadge--dot pkpBadge--production">
+                                                        <button class="pkpBadge pkpBadge--button pkpBadge--dot">
                                                              <a href="{$plugin}/export?submission={$item["id"]}" class="">
-                                                                {translate key="plugins.importexport.crossref.deposit"}
+                                                                {translate key="plugins.importexport.crossref.redeposit"}
                                                             </a>                                                           
                                                         </button>
                                                         {/if} 

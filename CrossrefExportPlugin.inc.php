@@ -118,6 +118,7 @@ class CrossrefExportPlugin extends ImportExportPlugin
 
 			// Check for notices and errors:
 			// Notice: No ISBN! Element 'noisbn' will be used in export.
+			// Notice: Crossref failed messages
 			// Error: No ISSN for series!
 			// Error: No publisher name in Press settings
 
@@ -210,7 +211,7 @@ class CrossrefExportPlugin extends ImportExportPlugin
 				$exportFileName = $this->getExportFileName($this->getExportPath(), 'crossref-' . $submissionId, $press, '.xml');
 				$exportXml = $DOMDocument->saveXML();
 				$fileManager->writeFile($exportFileName, $exportXml);
-				$result = $this->depositXML($submission, $exportFileName, $doi);
+				$result = $this->depositXML($submission, $press, $exportFileName);
 				$fileManager->deleteByPath($exportFileName);
 			}
 		}
@@ -218,10 +219,9 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		return $result;
 	}
 
-	function depositXML($submission, $filename, $doi) {
-		$request = Application::getRequest();
-		$press = $request->getPress();
+	function depositXML($submission, $context, $filename) {
 		$status = null;
+		$msg = null;
 
 		import('lib.pkp.classes.helpers.PKPCurlHelper');
 		$curlCh = PKPCurlHelper::getCurlObject();
@@ -231,11 +231,11 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		curl_setopt($curlCh, CURLOPT_HEADER, 0);
 
 		// Use a different endpoint for testing and production.
-		$endpoint = ($this->isTestMode($press) ? CROSSREF_API_URL_DEV : CROSSREF_API_URL);
+		$endpoint = ($this->isTestMode($context) ? CROSSREF_API_URL_DEV : CROSSREF_API_URL);
 		curl_setopt($curlCh, CURLOPT_URL, $endpoint);
 		// Set the form post fields
-		$username = $this->getSetting($press->getId(), 'username');
-		$password = $this->getSetting($press->getId(), 'password');
+		$username = $this->getSetting($context->getId(), 'username');
+		$password = $this->getSetting($context->getId(), 'password');
 		assert(is_readable($filename));
 		if (function_exists('curl_file_create')) {
 			curl_setopt($curlCh, CURLOPT_SAFE_UPLOAD, true);
@@ -258,7 +258,6 @@ class CrossrefExportPlugin extends ImportExportPlugin
 			$batchIdNode = $xmlDoc->getElementsByTagName('batch_id')->item(0);
 			// Get re message
 			$msg = $xmlDoc->getElementsByTagName('msg')->item(0)->nodeValue;
-			error_log(print_r($response, true));
 			$status = CROSSREF_STATUS_FAILED;
 			$result = false;
 		} else {
@@ -266,7 +265,6 @@ class CrossrefExportPlugin extends ImportExportPlugin
 			$xmlDoc = new DOMDocument();
 			$xmlDoc->loadXML($response);
 			$batchIdNode = $xmlDoc->getElementsByTagName('batch_id')->item(0);
-
 
 			// Get the DOI deposit status
 			// If the deposit failed
@@ -291,7 +289,7 @@ class CrossrefExportPlugin extends ImportExportPlugin
 
 		// Update the status
 		if ($status) {
-			$this->updateDepositStatus($press, $submission, $status, $batchIdNode->nodeValue, $msg);
+			$this->updateDepositStatus($context, $submission, $status, $batchIdNode->nodeValue, $msg);
 		}
 
 		curl_close($curlCh);
@@ -392,27 +390,19 @@ class CrossrefExportPlugin extends ImportExportPlugin
 	}
 
 	public static function logFilePath() {
-
 		return Config::getVar('files', 'files_dir') . '/CROSSREF_ERROR.log';
 	}
 
-	function getCrossrefAPITestPrefix() {
-		$request = Application::getRequest();
-		$press = $request->getPress();
-		return $this->getSetting($press->getId(), 'testPrefix');
-	}
 
 	function executeCLI($scriptName, &$args) {
 		fatalError('Not implemented.');
 	}
 
 	function getDescription() {
-
 		return __('plugins.importexport.crossref.description');
 	}
 
 	function getDisplayName() {
-
 		return __('plugins.importexport.crossref.displayName');
 	}
 

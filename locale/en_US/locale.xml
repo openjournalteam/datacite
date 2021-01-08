@@ -13,19 +13,15 @@
 	<message key="plugins.importexport.crossref.settings.description">Description</message>
 	<message key="plugins.importexport.crossref.intro"><![CDATA[ This plugin registers DOIs for monographs and chapters  for DOI provider <a href="https://crossref.org">Crossref.org</a>.]]></message>
 	<message key="plugins.importexport.crossref.settings">Settings</message>
-	<message key="plugins.importexport.crossref.settings.form.testUrl">Test Url</message>
 	<message key="plugins.importexport.crossref.settings.form.password">Password</message>
 	<message key="plugins.importexport.crossref.settings.form.password.description"></message>
-	<message key="plugins.importexport.crossref.settings.form.url">Crossref URL</message>
-	<message key="plugins.importexport.crossref.settings.form.username">Username (symbol)</message>
-	<message key="plugins.importexport.crossref.settings.form.usernameRequired">Please enter the username (symbol) you got from Crossref. The username may not contain colons.</message>
-	<message key="plugins.importexport.crossref.settings.form.automaticRegistration.description">OMP will deposit DOIs automatically to Crossref. Please note that this may take a short amount of time after publication to process (e.g. depending on your cronjob configuration). You can check for all unregistered DOIs.</message>
-	<message key="plugins.importexport.crossref.settings.form.testMode.description">Use the Crossref test prefix for DOI registration. Please do not forget to remove this option for the production.</message>
-	<message key="plugins.importexport.crossref.settings.form.testDescription">Test Server settings </message>
-	<message key="plugins.importexport.crossref.settings.form.testIntro">You can set the crossrefd test server here </message>
-	<message key="plugins.importexport.crossref.settings.form.testPrefix">Test Prefix</message>
-	<message key="plugins.importexport.crossref.settings.form.testRegistry"> Test registry</message>
-	<message key="plugins.importexport.crossref.settings.form.testUrl">Test URL</message>
+	<message key="plugins.importexport.crossref.settings.form.username">Crossref username</message>
+	<message key="plugins.importexport.crossref.settings.form.usernameRequired">Please enter the username you got from Crossref.</message>
+	<message key="plugins.importexport.crossref.settings.form.testMode.description">Use the Crossref test API for DOI registration. Please do not forget to remove this option for the production.</message>
 	<message key="plugins.importexport.crossref.senderTask.name">Crossref automatic registration task</message>
+	<message key="plugins.importexport.crossref.register.error.mdsError">Registration was not fully successful! The DOI registration server returned an error.</message>
+	<message key="plugins.importexport.crossref.register.success">Registration was successful!</message>
+	<message key="plugins.importexport.crossref.chapterDoiCount">Chapter DOIs</message>
+	<message key="plugins.importexport.crossref.notice.noIsbn">Note! No ISBN available. Crossref export will use "noisbn" selection.</message>
 	<message key="plugins.importexport.crossref.cliUsage"><![CDATA[Usage: {$scriptName} {$pluginName} export [outputFileName] [journal_path] {issues|articles|galleys} objectId1 [objectId2] ... {$scriptName} {$pluginName} register [journal_path] {issues|articles|galleys} objectId1 [objectId2] ...]]></message>
 </locale>
