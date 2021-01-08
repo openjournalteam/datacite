@@ -34,19 +34,14 @@
                 <p class="pkp_help">{translate key="plugins.importexport.crossref.settings.description"}</p>
                 <p class="pkp_help">{translate key="plugins.importexport.crossref.intro"}</p>
 			{fbvFormSection}
-            {fbvElement type="text" id="api" value=$api label="plugins.importexport.crossref.settings.form.url" maxlength="100" size=$fbvStyles.size.MEDIUM}
             {fbvElement type="text" id="username" value=$username label="plugins.importexport.crossref.settings.form.username" maxlength="50" size=$fbvStyles.size.MEDIUM}
             {fbvElement type="text" password="true" id="password" value=$password label="plugins.importexport.crossref.settings.form.password" maxLength="50" size=$fbvStyles.size.MEDIUM}
                 <span class="instruct">{translate key="plugins.importexport.crossref.settings.form.password.description"}</span>
                 <br/>
             {/fbvFormSection}
-                <hr>
             {fbvFormSection list="true"}
             {fbvElement type="checkbox" id="testMode" label="plugins.importexport.crossref.settings.form.testMode.description" checked=$testMode|compare:true}
             {/fbvFormSection}
-            {fbvElement type="text" id="testRegistry" value=$testRegistry label="plugins.importexport.crossref.settings.form.testRegistry" maxlength="200" size=$fbvStyles.size.MEDIUM}
-            {fbvElement type="text" id="testPrefix" value=$testPrefix label="plugins.importexport.crossref.settings.form.testPrefix" maxlength="10" size=$fbvStyles.size.MEDIUM}
-            {fbvElement type="text" id="testUrl" value=$testUrl label="plugins.importexport.crossref.settings.form.testUrl" maxlength="200" size=$fbvStyles.size.MEDIUM}
             {/fbvFormArea}
             {fbvFormButtons submitText="common.save"}
         </form>
@@ -78,17 +73,31 @@
                                                         {$item["authors"]}
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__title">
-                                                        {$item["title"]}
+                                                        {$item["title"]}<br />
+                                                        DOI: {$item["pubId"]} {translate key="plugins.importexport.crossref.chapterDoiCount"}:  {$item["chapterPubIds"]|count}
+                                                    </div>
+                                                    <div class="pkpListPanelItem--submission__activity">
+                                                        {if $item["notices"]}   
+                                                            {foreach from=$item["notices"] item=$notice}
+                                                                <span aria-hidden="true" class="fa fa-exclamation-triangle pkpIcon--inline"></span> {$notice} <br />
+                                                            {/foreach}
+                                                        {/if}
+                                                        {if $item["errors"]}   
+                                                            {foreach from=$item["errors"] item=$error}
+                                                                <span aria-hidden="true" class="fa fa-exclamation-triangle pkpIcon--inline"></span> {$error} <br />
+                                                            {/foreach}
+                                                        {/if}
                                                     </div>
                                                 </div>
                                                 <div class="pkpListPanelItem--submission__stage">
                                                     <div class="pkpListPanelItem--submission__stageRow">
+                                                        {if !$item["errors"]} 
                                                         <button class="pkpBadge pkpBadge--button pkpBadge--dot pkpBadge--submission">
                                                             <a href="{$plugin}/export?submission={$item["id"]}" class="">
-                                                                {$item["pubId"]}
+                                                                {translate key="plugins.importexport.crossref.deposit"}
                                                             </a>
-
                                                         </button>
+                                                        {/if} 
                                                         <div aria-hidden="true"
                                                              class="pkpListPanelItem--submission__flags">
                                                         </div>
@@ -136,16 +145,31 @@
                                                         {$item["authors"]}
                                                     </div>
                                                     <div class="pkpListPanelItem--submission__title">
-                                                        {$item["title"]}
+                                                        {$item["title"]}<br />
+                                                        DOI: {$item["pubId"]} {translate key="plugins.importexport.crossref.chapterDoiCount"}:  {$item["chapterPubIds"]|count}
+                                                    </div>
+                                                    <div class="pkpListPanelItem--submission__activity">
+                                                        {if $item["notices"]}   
+                                                            {foreach from=$item["notices"] item=$notice}
+                                                                <span aria-hidden="true" class="fa fa-exclamation-triangle pkpIcon--inline"></span> {$notice} <br />
+                                                            {/foreach}
+                                                        {/if}
+                                                        {if $item["errors"]}   
+                                                            {foreach from=$item["errors"] item=$error}
+                                                                <span aria-hidden="true" class="fa fa-exclamation-triangle pkpIcon--inline"></span> {$error} <br />
+                                                            {/foreach}
+                                                        {/if}
                                                     </div>
                                                 </div>
                                                 <div class="pkpListPanelItem--submission__stage">
                                                     <div class="pkpListPanelItem--submission__stageRow">
+                                                        {if !$item["errors"]} 
                                                         <button class="pkpBadge pkpBadge--button pkpBadge--dot pkpBadge--production">
-                                                            <a href="{$item["registry"]}/{$item["pubId"]}" class="">
-                                                                {$item["pubId"]}
-                                                            </a>
+                                                             <a href="{$plugin}/export?submission={$item["id"]}" class="">
+                                                                {translate key="plugins.importexport.crossref.deposit"}
+                                                            </a>                                                           
                                                         </button>
+                                                        {/if} 
                                                         <div aria-hidden="true"
                                                              class="pkpListPanelItem--submission__flags">
                                                         </div>

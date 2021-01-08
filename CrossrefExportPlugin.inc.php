@@ -1,13 +1,14 @@
 <?php
 
+use Illuminate\Database\Capsule\Manager as Capsule;
 
 import('lib.pkp.classes.plugins.ImportExportPlugin');
 import('plugins.importexport.crossref.CrossrefExportDeployment');
-define('CROSSREF_API_RESPONSE_OK', array(200));
-
-define('CROSSREF_API_REGISTRY', 'https://crossref.org');
-define('CROSSREF_MDS_REGISTRY', 'https://mds.crossref.org/metadata/');
-define('CROSSREF_MDS_TEST__REGISTRY', 'https://mds.test.crossref.org/metadata/');
+define('CROSSREF_API_DEPOSIT_OK', 200);
+define('CROSSREF_STATUS_FAILED', 'failed');
+define('CROSSREF_API_URL', 'https://test.crossref.org/v2/deposits');
+define('CROSSREF_API_URL_DEV', 'https://test.crossref.org/v2/deposits');
+define('EXPORT_STATUS_REGISTERED', 'registered');
 
 
 class CrossrefExportPlugin extends ImportExportPlugin
@@ -37,9 +38,8 @@ class CrossrefExportPlugin extends ImportExportPlugin
 				break;
 			case 'export':
 				import('classes.notification.NotificationManager');
-
-				$responses = $this->exportSubmissions((array)$request->getUserVar('submission'));
-				$this->createNotifications($request, $responses);
+				$result = $this->exportSubmissions((array)$request->getUserVar('submission'));
+				$this->createNotifications($request, $result);
 				$request->redirect(null, 'management', 'importexport', array('plugin', 'CrossrefExportPlugin'));
 				break;
 			default:
@@ -48,47 +48,29 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		}
 	}
 
-	function getName()
-	{
-
+	function getName() {
 		return 'CrossrefExportPlugin';
 	}
 
 	function getSettings(TemplateManager $templateMgr) {
 		$request = Application::getRequest();
 		$press = $request->getPress();
-
-
-		$api = $this->getSetting($press->getId(), 'api');
-		$templateMgr->assign('api', $api);
 		$username = $this->getSetting($press->getId(), 'username');
 		$templateMgr->assign('username', $username);
 		$password = $this->getSetting($press->getId(), 'password');
 		$templateMgr->assign('password', $password);
 		$testMode = $this->getSetting($press->getId(), 'testMode');
 		$templateMgr->assign('testMode', $testMode);
-		$testPrefix = $this->getSetting($press->getId(), 'testPrefix');
-		$templateMgr->assign('testPrefix', $testPrefix);
-		$testRegistry = $this->getSetting($press->getId(), 'testRegistry');
-		$templateMgr->assign('testRegistry', $testRegistry);
-		$testUrl = $this->getSetting($press->getId(), 'testUrl');
-		$templateMgr->assign('testUrl', $testUrl);
-
-		return array($press, $api, $username, $password, $testMode, $testPrefix, $testRegistry, $testUrl);
+		return array($press, $username, $password, $testMode);
 	}
 
 	function updateSettings($request) {
-
 		$contextId = $request->getContext()->getId();
 		$userVars = $request->getUserVars();
 		if (count($userVars) > 0) {
-			$this->updateSetting($contextId, "api", $userVars["api"]);
 			$this->updateSetting($contextId, "username", $userVars["username"]);
 			$this->updateSetting($contextId, "password", $userVars["password"]);
 			$this->updateSetting($contextId, "testMode", $userVars["testMode"]);
-			$this->updateSetting($contextId, "testPrefix", $userVars["testPrefix"]);
-			$this->updateSetting($contextId, "testRegistry", $userVars["testRegistry"]);
-			$this->updateSetting($contextId, "testUrl", $userVars["testUrl"]);
 		}
 	}
 
@@ -96,16 +78,82 @@ class CrossrefExportPlugin extends ImportExportPlugin
 
 		$context = $request->getContext();
 		$press = $request->getPress();
+		$username = $this->getSetting($press->getId(), 'username');
+		$password = $this->getSetting($press->getId(), 'password');
+
 		$submissionService = Services::get('submission');
-		$submissions = $submissionService->getMany(['contextId' => $press->getId()]);
+		$submissions = $submissionService->getMany([
+			'contextId' => $press->getId(),
+			'status' => STATUS_PUBLISHED,
+		]);
 		$itemsQueue = [];
 		$itemsDeposited = [];
 		$locale = AppLocale::getLocale();
-		$registry = $this->getRegistry($press);
+
 		foreach ($submissions as $submission) {
 			$submissionId = $submission->getId();
+			$publication = $submission->getCurrentPublication();
 			$doi = $submission->getCurrentPublication()->getData('pub-id::doi');
-			$registeredDoi = $submission->getCurrentPublication()->getData('crossref::registeredDoi');
+
+			$registeredDoi = Capsule::table('submission_settings')
+						->where('submission_id', '=', $submissionId)
+						->where('setting_name', '=', 'crossref::registeredDoi')
+						->value('setting_value');
+
+			$failedMsg = Capsule::table('submission_settings')
+						->where('submission_id', '=', $submissionId)
+						->where('setting_name', '=', 'crossref::failedMsg')
+						->value('setting_value');
+
+			$notices = [];
+			$errors = [];
+
+			$chapters = $publication->getData('chapters');
+			$chapterDois = [];
+			foreach ($chapters as $chapter) {
+				if ($chapter->getData('pub-id::doi')){
+					$chapterDois[] = $chapter->getData('pub-id::doi');
+				}
+			}
+
+			// Check for notices and errors:
+			// Notice: No ISBN! Element 'noisbn' will be used in export.
+			// Error: No ISSN for series!
+			// Error: No publisher name in Press settings
+
+			$publicationFormats = $publication->getData('publicationFormats');
+			$noIsbn = true;
+			foreach ($publicationFormats as $publicationFormat) {
+				$identificationCodes = $publicationFormat->getIdentificationCodes();
+				while ($identificationCode = $identificationCodes->next()) {
+					if ($identificationCode->getCode() == "02" || $identificationCode->getCode() == "15") {
+						// 02 and 15: ONIX codes for ISBN-10 or ISBN-13
+						$noIsbn = false;
+					}
+				}
+			}
+			if ($noIsbn){
+				$notices[] = __('plugins.importexport.crossref.notice.noIsbn');
+			}
+
+			if ($failedMsg) {
+				 $notices[] = $failedMsg;
+			}
+
+			if (!$username && !$password) {
+				 $errors[] = __('plugins.importexport.crossref.error.noUserCrecentials');
+			}
+
+			if (!$press->getData('publisher')) {
+				 $errors[] = __('plugins.importexport.crossref.error.noPublisher');
+			}
+
+			$seriesDao = DAORegistry::getDAO('SeriesDAO'); /* @var $seriesDao SeriesDAO */
+			if ($series = $seriesDao->getById($publication->getData('seriesId'))){
+				if ($series->getOnlineISSN() && $series->getPrintISSN()) {
+					$errors[] = __('plugins.importexport.crossref.error.noIssn');
+				}
+			}
 
 			if ($doi and $registeredDoi) {
 				$itemsDeposited[] = array(
@@ -113,7 +161,9 @@ class CrossrefExportPlugin extends ImportExportPlugin
 					'title' => $submission->getLocalizedTitle($locale),
 					'authors' => $submission->getAuthorString($locale),
 					'pubId' => $doi,
-					'registry' => $registry,
+					'chapterPubIds' => $chapterDois,
+					'notices' => $notices,
+					'errors' => $errors,
 				);
 			}
 			if ($doi and !$registeredDoi) {
@@ -122,30 +172,21 @@ class CrossrefExportPlugin extends ImportExportPlugin
 					'title' => $submission->getLocalizedTitle($locale),
 					'authors' => $submission->getAuthorString($locale),
 					'pubId' => $doi,
-					'registry' => $registry,
+					'chapterPubIds' => $chapterDois,
+					'notices' => $notices,
+					'errors' => $errors,
 				);
 			}
 		}
+
 		$templateMgr->assign('itemsQueue', $itemsQueue);
 		$templateMgr->assign('itemsSizeQueue', sizeof($itemsQueue));
 		$templateMgr->assign('itemsDeposited', $itemsDeposited);
 		$templateMgr->assign('itemsSizeDeposited', sizeof($itemsDeposited));
 	}
 
-	function getRegistry($press) {
-
-		$registry = CROSSREF_API_REGISTRY;
-		if ($this->isTestMode($press)) {
-			$registry = $this->getSetting($press->getId(), 'testRegistry');
-		}
-
-		return $registry;
-	}
-
 	function isTestMode($press) {
-
 		$testMode = $this->getSetting($press->getId(), 'testMode');
-
 		return ($testMode == "on");
 	}
 
@@ -160,16 +201,16 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		foreach ($submissionIds as $submissionId) {
 			$deployment = new CrossrefExportDeployment($request, $this);
 			$submission = $submissionDao->getById($submissionId, $request->getContext()->getId());
-			if ($submission->getCurrentPublication()->getData('pub-id::doi')) {
+			$publication = $submission->getCurrentPublication();
+			$doi = $publication->getStoredPubId('doi');
+			if ($doi) {
 				$DOMDocument = new DOMDocument('1.0', 'utf-8');
 				$DOMDocument->formatOutput = true;
-				$DOMDocument = $deployment->createNodes($DOMDocument, $submission, null, true);
+				$DOMDocument = $deployment->createNodes($DOMDocument, $submission, $publication);
 				$exportFileName = $this->getExportFileName($this->getExportPath(), 'crossref-' . $submissionId, $press, '.xml');
 				$exportXml = $DOMDocument->saveXML();
-				error_log(print_r($exportXml, true));
 				$fileManager->writeFile($exportFileName, $exportXml);
-				$response = $this->depositXML($submission, $exportFileName, true);
-				$result[$submissionId] = ($response != "") ? $response : "";
+				$result = $this->depositXML($submission, $exportFileName, $doi);
 				$fileManager->deleteByPath($exportFileName);
 			}
 		}
@@ -177,159 +218,177 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		return $result;
 	}
 
-	function depositXML($object, $filename) {
-
-
-		$doi = $object->getData('pub-id::doi');
+	function depositXML($submission, $filename, $doi) {
 		$request = Application::getRequest();
 		$press = $request->getPress();
+		$status = null;
 
-		assert(!empty($doi));
-		if ($this->isTestMode($press)) {
-			$doi = $this->createTestDOI($request, $doi);
-		}
+		import('lib.pkp.classes.helpers.PKPCurlHelper');
+		$curlCh = PKPCurlHelper::getCurlObject();
 
-		$url = Request::url($press->getPath(), 'catalog', 'book', array($object->getId()));
-		assert(!empty($url));
-
-		$curlCh = curl_init();
-
-
-		$username = $this->getSetting($press->getId(), 'username');
-		$api = $this->getSetting($press->getId(), 'api');
-		$password = $this->getSetting($press->getId(), 'password');
-
-
-		if ($httpProxyHost = Config::getVar('proxy', 'http_host')) {
-			curl_setopt($curlCh, CURLOPT_PROXY, $httpProxyHost);
-			curl_setopt($curlCh, CURLOPT_PROXYPORT, Config::getVar('proxy', 'http_port', '80'));
-			if ($username = Config::getVar('proxy', 'username')) {
-				curl_setopt($curlCh, CURLOPT_PROXYUSERPWD, $username . ':' . Config::getVar('proxy', 'password'));
-			}
-		}
-
-		if (array_key_exists('redeposit', $request->getUserVars())) {
-			if ($request->getUserVar('redeposit') == 1) {
-				$api = ($this->isTestMode($press)) ? CROSSREF_MDS_TEST__REGISTRY . $doi : CROSSREF_MDS_REGISTRY . $doi;
-				curl_setopt($curlCh, CURLOPT_HTTPHEADER, array('Content-Type: text/plain;charset=UTF-8'));
-			}
-		} else {
-			curl_setopt($curlCh, CURLOPT_HTTPHEADER, array('Content-Type: application/vnd.api+json'));
-		}
-
-		
-
-		curl_setopt($curlCh, CURLOPT_VERBOSE, true);
 		curl_setopt($curlCh, CURLOPT_RETURNTRANSFER, true);
-		curl_setopt($curlCh, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
-		curl_setopt($curlCh, CURLOPT_USERPWD, "$username:$password");
-		curl_setopt($curlCh, CURLOPT_SSL_VERIFYPEER, false);
-		curl_setopt($curlCh, CURLOPT_URL, $api);
+		curl_setopt($curlCh, CURLOPT_POST, true);
+		curl_setopt($curlCh, CURLOPT_HEADER, 0);
 
+		// Use a different endpoint for testing and production.
+		$endpoint = ($this->isTestMode($press) ? CROSSREF_API_URL_DEV : CROSSREF_API_URL);
+		curl_setopt($curlCh, CURLOPT_URL, $endpoint);
+		// Set the form post fields
+		$username = $this->getSetting($press->getId(), 'username');
+		$password = $this->getSetting($press->getId(), 'password');
 		assert(is_readable($filename));
-		$payload = file_get_contents($filename);
-
-		assert($payload !== false && !empty($payload));
-		$fp = fopen ($filename, "r");
-
-		curl_setopt($curlCh, CURLOPT_VERBOSE, false);
-
-		if (array_key_exists('redeposit', $request->getUserVars())) {
-			if ($request->getUserVar('redeposit') == 1) {
-				curl_setopt($curlCh, CURLOPT_PUT, true);
-				curl_setopt($curlCh, CURLOPT_INFILE, $fp);
-
-			}
+		if (function_exists('curl_file_create')) {
+			curl_setopt($curlCh, CURLOPT_SAFE_UPLOAD, true);
+			$cfile = new CURLFile($filename);
 		} else {
-			$crossrefPayloadObject = $this->createCrossrefPayload($object, $url, $payload, true);
-			curl_setopt($curlCh, CURLOPT_POSTFIELDS, $crossrefPayloadObject);
+			$cfile = "@$filename";
 		}
+		$data = array('operation' => 'doMDUpload', 'usr' => $username, 'pwd' => $password, 'mdFile' => $cfile);
+		curl_setopt($curlCh, CURLOPT_POSTFIELDS, $data);
 		$response = curl_exec($curlCh);
-		
-		$status = curl_getinfo($curlCh, CURLINFO_HTTP_CODE);
-		curl_close($curlCh);
-		fclose($fp);
 
-
-		$this->setDOI($object, $status, $response, $press, $request, $doi);
-
-		return $response;
-	}
-
-	public function createTestDOI($request, $doi)
-	{
-		return PKPString::regexp_replace('#^[^/]+/#', $this->getCrossrefAPITestPrefix() . '/', $doi);
-	}
-
-	function getCrossrefAPITestPrefix()
-	{
-		$request = Application::getRequest();
-		$press = $request->getPress();
-
-		return $this->getSetting($press->getId(), 'testPrefix');
-	}
-
-	function createCrossrefPayload($obj, $url, $payload, $payLoadAvailable = false) {
-
-		$doi = $obj->getStoredPubId("doi");
-		$request = Application::getRequest();
-		$press = $request->getPress();
-		if ($this->isTestMode($press)) {
-			$doi = $this->createTestDOI($request, $doi);
-		}
-		if ($payLoadAvailable) {
-			$jsonPayload = array("data" => (array('id' => $doi, 'type' => "dois", 'attributes' => array("event" => "publish", "doi" => $doi, "url" => $url, "xml" => base64_encode($payload)))));
+		if ($response === false) {
+			$result = array(array('plugins.importexport.common.register.error.mdsError', 'No response from server.'));
+		} elseif (curl_getinfo($curlCh, CURLINFO_HTTP_CODE) != CROSSREF_API_DEPOSIT_OK) {
+			// These are the failures that occur immediatelly on request
+			// and can not be accessed later, so we save the falure message in the DB
+			$xmlDoc = new DOMDocument();
+			$xmlDoc->loadXML($response);
+			// Get batch ID
+			$batchIdNode = $xmlDoc->getElementsByTagName('batch_id')->item(0);
+			// Get re message
+			$msg = $xmlDoc->getElementsByTagName('msg')->item(0)->nodeValue;
+			error_log(print_r($response, true));
+			$status = CROSSREF_STATUS_FAILED;
+			$result = false;
 		} else {
-			$jsonPayload = array("data" => (array('type' => "dois", 'attributes' => array("doi" => $doi))));
-		}
-
-		return json_encode($jsonPayload, JSON_UNESCAPED_SLASHES);
-
-	}
-
-	private function setDOI($object, $status, $response, $press, $request, $doi): void {
-		$result = true;
-		if (!in_array($status, CROSSREF_API_RESPONSE_OK)) {
-			$result = array(array('plugins.importexport.common.register.error.mdsError', $response));
-		}
+			// Get DOMDocument from the response XML string
+			$xmlDoc = new DOMDocument();
+			$xmlDoc->loadXML($response);
+			$batchIdNode = $xmlDoc->getElementsByTagName('batch_id')->item(0);
 
 
-		if ($result === true) {
-			if ($this->isTestMode($press)) {
-				$doi = $this->createTestDOI($request, $doi);
-			}
-			$object->setData('crossref::registeredDoi', $doi);
-			$submissionDao = Application::getSubmissionDAO();
-			$submissionDao->updateObject($object);
-		}
-	}
+			// Get the DOI deposit status
+			// If the deposit failed
+			$failureCountNode = $xmlDoc->getElementsByTagName('failure_count')->item(0);
+			$failureCount = (int) $failureCountNode->nodeValue;
+			if ($failureCount > 0) {
+				$status = CROSSREF_STATUS_FAILED;
+				$result = false;
+			} else {
+				// Deposit was received
+				$status = EXPORT_STATUS_REGISTERED;
+				$result = true;
 
-	private function createNotifications($request, array $responses) {
-
-		$success = 1;
-		$notification = "";
-		$notificationManager = new NotificationManager();
-		foreach ($responses as $submission => $error) {
-			$result = json_decode(str_replace("\n", "", $error), true);
-
-			if (isset($result["errors"])) {
-				$detail = $result["errors"][0]["title"];
-				$success = 0;
-				self::writeLog($submission . " ::  " . $detail, 'ERROR');
-				$notificationManager->createTrivialNotification($request->getUser()->getId(), NOTIFICATION_TYPE_ERROR, array('contents' => $detail));
+				// If there were some warnings, display them
+				$warningCountNode = $xmlDoc->getElementsByTagName('warning_count')->item(0);
+				$warningCount = (int) $warningCountNode->nodeValue;
+				if ($warningCount > 0) {
+					$result = array(array('plugins.importexport.crossref.register.success.warning', htmlspecialchars($response)));
+				}
 			}
 		}
 
-		if ($success == 1) {
-			$detail = (strpos(implode($responses), 'OK') !== false) ? implode($responses) : "Successfully deposited";
-			$notificationManager->createTrivialNotification($request->getUser()->getId(), NOTIFICATION_TYPE_SUCCESS, array('contents' => $detail));
+		// Update the status
+		if ($status) {
+			$this->updateDepositStatus($press, $submission, $status, $batchIdNode->nodeValue, $msg);
 		}
+
+		curl_close($curlCh);
+		return $result;
+	}
+
+	function updateDepositStatus($context, $submission, $status, $batchId, $failedMsg = null) {
+		assert(is_a($submission, 'Submission'));
+
+		Capsule::table('submission_settings')
+			->where('submission_id', '=', $submission->getId())
+			->where('setting_name', '=', 'crossref::failedMsg')
+			->delete();
+
+		if ($failedMsg) {
+			Capsule::table('submission_settings')->insert([
+				'submission_id' => $submission->getId(),
+				'locale' => '',
+				'setting_name' => 'crossref::failedMsg',
+				'setting_value' => $failedMsg
+			]);
+		}
+
+		if ($status == EXPORT_STATUS_REGISTERED) {
+			// Save the DOI -- the submission will be updated
+			$this->saveRegisteredDoi($context, $submission);
+		}
+	}
+
+	function saveRegisteredDoi($context, $submission) {
+		$registeredDoi = $submission->getStoredPubId('doi');
+		assert(!empty($registeredDoi));
+
+		Capsule::table('submission_settings')
+			->where('submission_id', '=', $submission->getId())
+			->where('setting_name', '=', 'crossref::registeredDoi')
+			->delete();
+
+		Capsule::table('submission_settings')->insert([
+			'submission_id' => $submission->getId(),
+			'locale' => '',
+			'setting_name' => 'crossref::registeredDoi',
+			'setting_value' => $registeredDoi
+		]);
+	}
+
+	private function createNotifications($request, $result) {
+		if (!$result) {
+			$this->_sendNotification(
+				$request->getUser(),
+				'plugins.importexport.crossref.register.error.mdsError',
+				NOTIFICATION_TYPE_ERROR
+			);
+		} else {
+			if (!is_array($result)) {
+				$this->_sendNotification(
+					$request->getUser(),
+					'plugins.importexport.crossref.register.success',
+					NOTIFICATION_TYPE_SUCCESS
+				);
+			} else {
+				foreach ($result as $submission => $error) {
+					assert(is_array($error) && count($error) >= 1);
+					self::writeLog($submission . " ::  " . $error, 'ERROR');
+					$this->_sendNotification(
+						$request->getUser(),
+						$error[0],
+						NOTIFICATION_TYPE_ERROR,
+						(isset($error[1]) ? $error[1] : null)
+					);
+				}
+			}
+		}
+
 	}
 
 	private static function writeLog($message, $level) {
-
 		$fineStamp = date('Y-m-d H:i:s') . substr(microtime(), 1, 4);
 		error_log("$fineStamp $level $message\n", 3, self::logFilePath());
+	}
+
+	function _sendNotification($user, $message, $notificationType, $param = null) {
+		static $notificationManager = null;
+		if (is_null($notificationManager)) {
+			import('classes.notification.NotificationManager');
+			$notificationManager = new NotificationManager();
+		}
+		if (!is_null($param)) {
+			$params = array('param' => $param);
+		} else {
+			$params = null;
+		}
+		$notificationManager->createTrivialNotification(
+				$user->getId(),
+				$notificationType,
+				array('contents' => __($message, $params))
+				);
 	}
 
 	public static function logFilePath() {
@@ -337,8 +396,13 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		return Config::getVar('files', 'files_dir') . '/CROSSREF_ERROR.log';
 	}
 
-	function executeCLI($scriptName, &$args) {
+	function getCrossrefAPITestPrefix() {
+		$request = Application::getRequest();
+		$press = $request->getPress();
+		return $this->getSetting($press->getId(), 'testPrefix');
+	}
 
+	function executeCLI($scriptName, &$args) {
 		fatalError('Not implemented.');
 	}
 
@@ -353,12 +417,10 @@ class CrossrefExportPlugin extends ImportExportPlugin
 	}
 
 	function getPluginSettingsPrefix() {
-
 		return 'crossref';
 	}
 
 	function register($category, $path, $mainContextId = null) {
-
 		$success = parent::register($category, $path, $mainContextId);
 		if (!Config::getVar('general', 'installed') || defined('RUNNING_UPGRADE')) return $success;
 		if ($success && $this->getEnabled()) {
@@ -370,7 +432,6 @@ class CrossrefExportPlugin extends ImportExportPlugin
 	}
 
 	function usage($scriptName) {
-
 		fatalError('Not implemented.');
 	}
 
