@@ -11,15 +11,13 @@ define('CROSSREF_API_URL_DEV', 'https://test.crossref.org/v2/deposits');
 define('EXPORT_STATUS_REGISTERED', 'registered');
 
 
-class CrossrefExportPlugin extends ImportExportPlugin
-{
+class CrossrefExportPlugin extends ImportExportPlugin {
 
 	function __construct() {
 		parent::__construct();
 	}
 
 	function display($args, $request) {
-
 		$templateMgr = TemplateManager::getManager($request);
 		parent::display($args, $request);
 
@@ -34,7 +32,6 @@ class CrossrefExportPlugin extends ImportExportPlugin
 				$this->getSettings($templateMgr);
 				$this->depositHandler($request, $templateMgr);
 				$templateMgr->display($this->getTemplateResource('index.tpl'));
-
 				break;
 			case 'export':
 				import('classes.notification.NotificationManager');
@@ -75,15 +72,13 @@ class CrossrefExportPlugin extends ImportExportPlugin
 	}
 
 	private function depositHandler($request, TemplateManager $templateMgr) {
-
 		$context = $request->getContext();
-		$press = $request->getPress();
-		$username = $this->getSetting($press->getId(), 'username');
-		$password = $this->getSetting($press->getId(), 'password');
+		$username = $this->getSetting($context->getId(), 'username');
+		$password = $this->getSetting($context->getId(), 'password');
 
 		$submissionService = Services::get('submission');
 		$submissions = $submissionService->getMany([
-			'contextId' => $press->getId(),
+			'contextId' => $context->getId(),
 			'status' => STATUS_PUBLISHED,
 		]);
 		$itemsQueue = [];
@@ -145,7 +140,7 @@ class CrossrefExportPlugin extends ImportExportPlugin
 				 $errors[] = __('plugins.importexport.crossref.error.noUserCrecentials');
 			}
 
-			if (!$press->getData('publisher')) {
+			if (!$context->getData('publisher')) {
 				 $errors[] = __('plugins.importexport.crossref.error.noPublisher');
 			}
 
@@ -186,13 +181,11 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		$templateMgr->assign('itemsSizeDeposited', sizeof($itemsDeposited));
 	}
 
-	function isTestMode($press) {
-		$testMode = $this->getSetting($press->getId(), 'testMode');
-		return ($testMode == "on");
+	function isTestMode($context) {
+		return ($this->getSetting($context->getId(), 'testMode') == 1);
 	}
 
 	function exportSubmissions($submissionIds) {
-
 		import('lib.pkp.classes.file.FileManager');
 		$submissionDao = Application::getSubmissionDAO();
 		$request = Application::getRequest();
