@@ -1,15 +1,16 @@
 <?php
-
-use Illuminate\Database\Capsule\Manager as Capsule;
-
 import('lib.pkp.classes.plugins.ImportExportPlugin');
+import('lib.pkp.classes.submission.PKPSubmission');
 import('plugins.importexport.crossref.CrossrefExportDeployment');
+
 define('CROSSREF_API_DEPOSIT_OK', 200);
 define('CROSSREF_STATUS_FAILED', 'failed');
-define('CROSSREF_API_URL', 'https://api.crossref.org/v2/deposits');
+#define('CROSSREF_API_URL', 'https://api.crossref.org/v2/deposits');
+define('CROSSREF_API_URL', 'https://test.crossref.org/v2/deposits');
 define('CROSSREF_API_URL_DEV', 'https://test.crossref.org/v2/deposits');
 define('EXPORT_STATUS_REGISTERED', 'registered');
 
+use Illuminate\Database\Capsule\Manager as Capsule;
 
 class CrossrefExportPlugin extends ImportExportPlugin {
 
@@ -56,7 +57,7 @@ class CrossrefExportPlugin extends ImportExportPlugin {
 	}
 
 	function getSettings(TemplateManager $templateMgr) {
-		$request = Application::getRequest();
+		$request = Application::get()->getRequest();
 		$press = $request->getPress();
 		$username = $this->getSetting($press->getId(), 'username');
 		$templateMgr->assign('username', $username);

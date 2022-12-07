@@ -97,7 +97,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 	}
 
 	function createHeadNode($documentNode) {
-		$request = Application::getRequest();
+		$request = Application::get()->getRequest();
 		$press = $request->getPress();
 		$headNode = $documentNode->createElementNS($this->getNamespace(), 'head');
 		$timestamp = date("YmdHis")."000";
@@ -132,7 +132,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 	}
 
 	function createBookMetadataNode($documentNode, $submission, $publication) {
-		$request = Application::getRequest();
+		$request = Application::get()->getRequest();
 		$press = $request->getPress();
 		$locale = $publication->getData('locale');
 
@@ -220,7 +220,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 	}
 
 	function createSeriesMetadataNode($documentNode, $series) {
-			$request = Application::getRequest();
+			$request = Application::get()->getRequest();
 			$press = $request->getPress();
 
 			$seriesMetadataNode = $documentNode->createElement('series_metadata');
@@ -246,7 +246,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 	}
 
 	function createContentItemNode($documentNode, $submission, $publication, $chapter) {
-		$request = Application::getRequest();
+		$request = Application::get()->getRequest();
 		$press = $request->getPress();
 		$locale = $publication->getData('locale');
 

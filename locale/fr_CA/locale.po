@@ -99,9 +99,6 @@ msgstr "Résultats"
 msgid "plugins.importexport.users.importComplete"
 msgstr "Importation réussie. Les utilisateurs dont les noms et adresses électroniques ne sont pas utilisés ont été importés, ainsi que les groupes d'utilisateurs connexes."
 
-
-
-
 msgid "plugins.importexport.crossref.displayName"
 msgstr "Plugiciel XML pour Crossref XML"
 
@@ -139,7 +136,7 @@ msgid "plugins.importexport.crossref.settings.description"
 msgstr "Description"
 
 msgid "plugins.importexport.crossref.intro"
-msgstr "<![CDATA[ Ce plugiciel enregistre des DOIs pour les monographies et chapitres pour un fournisseur de DOI <a href='https://crossref.org'>Crossref.org</a>.]]>"
+msgstr "Ce plugiciel enregistre des DOIs pour les monographies et chapitres pour un fournisseur de DOI <a href='https://crossref.org'>Crossref.org</a>."
 
 msgid "plugins.importexport.crossref.settings"
 msgstr "Paramètres"
