@@ -100,8 +100,9 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 		$request = Application::getRequest();
 		$press = $request->getPress();
 		$headNode = $documentNode->createElementNS($this->getNamespace(), 'head');
-		$headNode->appendChild($node = $documentNode->createElementNS($this->getNamespace(), 'doi_batch_id', $this->xmlEscape($press->getData('initials', $press->getPrimaryLocale()) . '_' . time())));
-		$headNode->appendChild($node = $documentNode->createElementNS($this->getNamespace(), 'timestamp', time()));
+		$timestamp = date("YmdHis")."000";
+		$headNode->appendChild($node = $documentNode->createElementNS($this->getNamespace(), 'doi_batch_id', $this->xmlEscape($press->getData('initials', $press->getPrimaryLocale()) . '_' .  $timestamp)));
+		$headNode->appendChild($node = $documentNode->createElementNS($this->getNamespace(), 'timestamp', $timestamp));
 		$depositorNode = $documentNode->createElementNS($this->getNamespace(), 'depositor');
 		$depositorName = $press->getData('supportName');
 		$depositorEmail = $press->getData('supportEmail');
@@ -139,7 +140,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 		// Consider adding book_set_metadata option in cases where a series does not have an ISSN
 		$seriesDao = DAORegistry::getDAO('SeriesDAO'); /* @var $seriesDao SeriesDAO */
 		$series = $seriesDao->getById($publication->getData('seriesId'));
-		if ($series){
+		if ($series && ($series->getOnlineISSN() || $series->getPrintISSN())){
 			$bookMetadataNodeType = 'book_series_metadata';
 		} else{
 			$bookMetadataNodeType = 'book_metadata';
@@ -149,7 +150,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 		$bookMetadataNode->setAttribute('language', PKPLocale::getIso1FromLocale($locale));
 
 		// If a series, add series metadata
-		if ($series){
+		if ($series && ($series->getOnlineISSN() || $series->getPrintISSN())){
 			$bookMetadataNode->appendChild($this->createSeriesMetadataNode($documentNode, $series));
 		}
 
@@ -309,15 +310,15 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 	function createContributorsNode($documentNode, $authors, $locale, $isChapter = false) {
 
 		$contributorsNode = $documentNode->createElement('contributors');
-		
+
 		$isFirst = true;
 		foreach ($authors as $author) {
 			$personNameNode = $documentNode->createElement('person_name');
-			
+
 			if ($isChapter || !$author->getData('isVolumeEditor')) {
 				$personNameNode->setAttribute('contributor_role', 'author');
 			} else {
-				$personNameNode->setAttribute('contributor_role', 'editor');			
+				$personNameNode->setAttribute('contributor_role', 'editor');
 			}
 
 			if ($isFirst) {
@@ -330,7 +331,7 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 			$givenNames = $author->getGivenName(null);
 
 			// Check if both givenName and familyName is set for the submission language.
-			if (isset($familyNames[$locale]) && isset($givenNames[$locale])) {
+			if (!empty($familyNames[$locale]) && !empty($givenNames[$locale])) {
 				$personNameNode->setAttribute('language', PKPLocale::getIso1FromLocale($locale));
 				$personNameNode->appendChild($node = $documentNode->createElement('given_name', htmlspecialchars(ucfirst($givenNames[$locale]), ENT_COMPAT, 'UTF-8')));
 				$personNameNode->appendChild($node = $documentNode->createElement('surname', htmlspecialchars(ucfirst($familyNames[$locale]), ENT_COMPAT, 'UTF-8')));
@@ -340,8 +341,6 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 					if ($otherLocal != $locale && isset($familyName) && !empty($familyName)) {
 						if (!$hasAltName) {
 							$altNameNode = $documentNode->createElement('alt-name');
-							$personNameNode->appendChild($altNameNode);
-
 							$hasAltName = true;
 						}
 
@@ -357,13 +356,36 @@ class CrossrefExportDeployment extends PKPImportExportDeployment {
 					}
 				}
 
-			} else {
-				$personNameNode->appendChild($node = $documentNode->createElement('surname', htmlspecialchars(ucfirst($author->getFullName(false)), ENT_COMPAT, 'UTF-8')));
+			} elseif (!empty($givenNames[$locale])) {
+				$personNameNode->setAttribute('language', PKPLocale::getIso1FromLocale($locale));
+				$personNameNode->appendChild($node = $documentNode->createElement('surname', htmlspecialchars(ucfirst($givenNames[$locale]), ENT_COMPAT, 'UTF-8')));
+
+
+				$hasAltName = false;
+				foreach($givenNames as $otherLocal => $givenName) {
+					if ($otherLocal != $locale && isset($givenName) && !empty($givenName)) {
+						if (!$hasAltName) {
+							$altNameNode = $documentNode->createElement('alt-name');
+							$hasAltName = true;
+						}
+
+						$nameNode = $documentNode->createElement('name');
+						$nameNode->setAttribute('language', PKPLocale::getIso1FromLocale($otherLocal));
+
+						$nameNode->appendChild($node = $documentNode->createElement('surname', htmlspecialchars(ucfirst($givenName), ENT_COMPAT, 'UTF-8')));
+						$altNameNode->appendChild($nameNode);
+					}
+				}
 			}
 
 			if ($author->getData('orcid')) {
 				$personNameNode->appendChild($node = $documentNode->createElement('ORCID', $author->getData('orcid')));
 			}
+
+			if ($hasAltName && $altNameNode) {
+				$personNameNode->appendChild($altNameNode);
+			}
+
 			$contributorsNode->appendChild($personNameNode);
 			$isFirst = false;
 		}
