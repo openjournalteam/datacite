@@ -5,8 +5,8 @@ import('plugins.importexport.crossref.CrossrefExportDeployment');
 
 define('CROSSREF_API_DEPOSIT_OK', 200);
 define('CROSSREF_STATUS_FAILED', 'failed');
-#define('CROSSREF_API_URL', 'https://api.crossref.org/v2/deposits');
-define('CROSSREF_API_URL', 'https://test.crossref.org/v2/deposits');
+define('CROSSREF_API_URL', 'https://api.crossref.org/v2/deposits');
+#define('CROSSREF_API_URL', 'https://test.crossref.org/v2/deposits');
 define('CROSSREF_API_URL_DEV', 'https://test.crossref.org/v2/deposits');
 define('EXPORT_STATUS_REGISTERED', 'registered');
 
