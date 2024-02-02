@@ -18,6 +18,19 @@ class CrossrefExportPlugin extends ImportExportPlugin {
 		parent::__construct();
 	}
 
+	function register($category, $path, $mainContextId = null) {
+		$success = parent::register($category, $path, $mainContextId);
+
+		if (!Config::getVar('general', 'installed') || defined('RUNNING_UPGRADE')) return $success;
+		if ($success && $this->getEnabled()) {
+			$this->addLocaleData();
+
+			$this->import('CrossrefExportDeployment');
+		}
+
+		return $success;
+	}
+
 	function display($args, $request) {
 		$path = array('plugin', $this->getName());
 		$templateMgr = TemplateManager::getManager($request);
@@ -32,8 +45,16 @@ class CrossrefExportPlugin extends ImportExportPlugin {
 				$request->redirect(null, 'management', 'importexport', array('plugin', 'CrossrefExportPlugin'));
 			case '':
 				$this->getSettings($templateMgr);
-				$this->depositHandler($request, $templateMgr);
+				// $this->depositHandler($request, $templateMgr);
+
+				$templateMgr->assign('htmxjs', $this->getRequest()->getBaseUrl() . '/' . $this->getPluginPath() . '/js/htmx.js');
 				$templateMgr->display($this->getTemplateResource('index.tpl'));
+				break;
+			case 'queuetab':
+				$this->queuetab($request, $templateMgr);
+				break;
+			case 'depositedtab':
+				$this->depositedtab($request, $templateMgr);
 				break;
 			case 'export':
 				import('classes.notification.NotificationManager');
@@ -87,6 +108,8 @@ class CrossrefExportPlugin extends ImportExportPlugin {
 		$submissions = $submissionService->getMany([
 			'contextId' => $context->getId(),
 			'status' => STATUS_PUBLISHED,
+			'count' => 15,
+			'offset' => 0,
 		]);
 		$itemsQueue = [];
 		$itemsDeposited = [];
@@ -259,18 +282,18 @@ class CrossrefExportPlugin extends ImportExportPlugin {
 			if ($e->hasResponse()) {
 				$eResponseBody = $e->getResponse()->getBody(true);
 				$eStatusCode = $e->getResponse()->getStatusCode();
-				if ($eStatusCode == CROSSREF_API_DEPOSIT_ERROR_FROM_CROSSREF) {
-					$xmlDoc = new DOMDocument();
-					$xmlDoc->loadXML($eResponseBody);
-					$batchIdNode = $xmlDoc->getElementsByTagName('batch_id')->item(0);
-					$msg = $xmlDoc->getElementsByTagName('msg')->item(0)->nodeValue;
-					$msgSave = $msg . PHP_EOL . $eResponseBody;
-					$status = CROSSREF_STATUS_FAILED;
-					$this->updateDepositStatus($context, $submission, $status, $batchIdNode->nodeValue, $msgSave);
-					$returnMessage = $msg . ' (' .$eStatusCode . ' ' . $e->getResponse()->getReasonPhrase() . ')';
-				} else {
-					$returnMessage = $eResponseBody . ' (' .$eStatusCode . ' ' . $e->getResponse()->getReasonPhrase() . ')';
-				}
+				// if ($eStatusCode == CROSSREF_API_DEPOSIT_ERROR_FROM_CROSSREF) {
+				// 	$xmlDoc = new DOMDocument();
+				// 	$xmlDoc->loadXML($eResponseBody);
+				// 	$batchIdNode = $xmlDoc->getElementsByTagName('batch_id')->item(0);
+				// 	$msg = $xmlDoc->getElementsByTagName('msg')->item(0)->nodeValue;
+				// 	$msgSave = $msg . PHP_EOL . $eResponseBody;
+				// 	$status = CROSSREF_STATUS_FAILED;
+				// 	$this->updateDepositStatus($context, $submission, $status, $batchIdNode->nodeValue, $msgSave);
+				// 	$returnMessage = $msg . ' (' .$eStatusCode . ' ' . $e->getResponse()->getReasonPhrase() . ')';
+				// } else {
+				// }
+				$returnMessage = $eResponseBody . ' (' .$eStatusCode . ' ' . $e->getResponse()->getReasonPhrase() . ')';
 			}
 			return [['plugins.importexport.crossref.register.error.mdsError'], [$returnMessage]];
 		}
@@ -426,19 +449,264 @@ class CrossrefExportPlugin extends ImportExportPlugin {
 		return 'crossref';
 	}
 
-	function register($category, $path, $mainContextId = null) {
-		$success = parent::register($category, $path, $mainContextId);
-		if (!Config::getVar('general', 'installed') || defined('RUNNING_UPGRADE')) return $success;
-		if ($success && $this->getEnabled()) {
-			$this->addLocaleData();
-			$this->import('CrossrefExportDeployment');
-		}
 
-		return $success;
-	}
 
 	function usage($scriptName) {
 		fatalError('Not implemented.');
 	}
 
+	public function queuetab($request, $templateMgr)
+	{
+		$page = $request->getUserVar('page') ?? 1;
+		$itemsPerPage = 10;
+		$offset = ($page - 1) * $itemsPerPage;
+
+		\HookRegistry::register('Submission::getMany::queryObject', function($hookName, $args){
+			$q = &$args[0];
+
+			$q->whereNotIn('s.submission_id', function($query){
+				$query
+					->select('submission_id')
+					->from('submission_settings')
+					->where('setting_name', '=', 'crossref::registeredDoi');
+			});
+		});
+
+		$context = $request->getContext();
+		$username = $this->getSetting($context->getId(), 'username');
+		$password = $this->getSetting($context->getId(), 'password');
+		$submissionService = Services::get('submission');
+		$submissions = $submissionService->getMany([
+			'contextId' => $context->getId(),
+			'status' => STATUS_PUBLISHED,
+			'count' => $itemsPerPage,
+			'offset' => $offset,
+		]);
+
+		$submissionCounts = $submissions->_resultFactory->getCount();
+
+		$itemsQueue = [];
+		$locale = AppLocale::getLocale();
+
+		foreach ($submissions as $submission) {
+			$submissionId = $submission->getId();
+			$publication = $submission->getCurrentPublication();
+			$doi = $submission->getCurrentPublication()->getData('pub-id::doi');
+
+			$registeredDoi = Capsule::table('submission_settings')
+						->where('submission_id', '=', $submissionId)
+						->where('setting_name', '=', 'crossref::registeredDoi')
+						->value('setting_value');
+
+			if(!$doi || $registeredDoi) continue;
+
+			$failedMsg = Capsule::table('submission_settings')
+						->where('submission_id', '=', $submissionId)
+						->where('setting_name', '=', 'crossref::failedMsg')
+						->value('setting_value');
+
+			$notices = [];
+			$errors = [];
+
+			$chapters = $publication->getData('chapters');
+			$chapterDois = [];
+			foreach ($chapters as $chapter) {
+				if ($chapter->getData('pub-id::doi')){
+					$chapterDois[] = $chapter->getData('pub-id::doi');
+				}
+			}
+
+			// Check for notices and errors:
+			// Notice: No ISBN! Element 'noisbn' will be used in export.
+			// Notice: Crossref failed messages
+			// Notice: No ISSN for series!
+			// Error: No publisher name in Press settings
+
+			$publicationFormats = $publication->getData('publicationFormats');
+			$noIsbn = true;
+			foreach ($publicationFormats as $publicationFormat) {
+				$identificationCodes = $publicationFormat->getIdentificationCodes();
+				while ($identificationCode = $identificationCodes->next()) {
+					if ($identificationCode->getCode() == "02" || $identificationCode->getCode() == "15") {
+						// 02 and 15: ONIX codes for ISBN-10 or ISBN-13
+						$noIsbn = false;
+					}
+				}
+			}
+			if ($noIsbn){
+				$notices[] = __('plugins.importexport.crossref.notice.noIsbn');
+			}
+
+			if ($failedMsg) {
+				 $notices[] = $failedMsg;
+			}
+
+			if (!$username && !$password) {
+				 $errors[] = __('plugins.importexport.crossref.error.noUserCrecentials');
+			}
+
+			if (!$context->getData('publisher')) {
+				 $errors[] = __('plugins.importexport.crossref.error.noPublisher');
+			}
+
+			$seriesDao = DAORegistry::getDAO('SeriesDAO'); /* @var $seriesDao SeriesDAO */
+			if ($series = $seriesDao->getById($publication->getData('seriesId'))){
+				if (!$series->getOnlineISSN() && !$series->getPrintISSN()) {
+					$notices[] = __('plugins.importexport.crossref.error.noIssn');
+				}
+			}
+
+			$itemsQueue[] = array(
+				'id' => $submissionId,
+				'title' => $submission->getLocalizedTitle($locale),
+				'authors' => $submission->getAuthorString($locale),
+				'pubId' => $doi,
+				'chapterPubIds' => $chapterDois,
+				'notices' => $notices,
+				'errors' => $errors,
+			);
+		}
+
+		$templateMgr->assign('itemsQueue', $itemsQueue);
+		$templateMgr->assign('itemsSizeQueue', $submissionCounts);
+		$templateMgr->assign('currentPage', $page);
+		$templateMgr->assign('itemsPerPage', $itemsPerPage);
+		$templateMgr->assign('totalPages', ceil($submissionCounts / $itemsPerPage));
+		$templateMgr->assign('offset', $offset);
+		$templateMgr->assign('totalShowedItem', $offset + $itemsPerPage);
+		$templateMgr->assign('canClickPrevious', $page > 1);
+		$templateMgr->assign('canClickNext', $page < ceil($submissionCounts / $itemsPerPage));
+		$templateMgr->assign('previousPage', $page - 1);
+		$templateMgr->assign('nextPage', $page + 1);
+		
+		$templateMgr->display($this->getTemplateResource('queuetab.tpl'));
+	}
+
+	public function depositedtab($request, $templateMgr)
+	{
+		$page = $request->getUserVar('page') ?? 1;
+		$itemsPerPage = 10;
+		$offset = ($page - 1) * $itemsPerPage;
+
+		\HookRegistry::register('Submission::getMany::queryObject', function($hookName, $args){
+			$q = &$args[0];
+
+			$q->whereIn('s.submission_id', function($query){
+				$query
+					->select('submission_id')
+					->from('submission_settings')
+					->where('setting_name', '=', 'crossref::registeredDoi');
+			});
+		});
+
+		$context = $request->getContext();
+		$username = $this->getSetting($context->getId(), 'username');
+		$password = $this->getSetting($context->getId(), 'password');
+		$submissionService = Services::get('submission');
+		$submissions = $submissionService->getMany([
+			'contextId' => $context->getId(),
+			'status' => STATUS_PUBLISHED,
+			'count' => $itemsPerPage,
+			'offset' => $offset,
+		]);
+
+		$submissionCounts = $submissions->_resultFactory->getCount();
+
+		$itemsQueue = [];
+		$locale = AppLocale::getLocale();
+
+		
+		foreach ($submissions as $submission) {
+			$submissionId = $submission->getId();
+			$publication = $submission->getCurrentPublication();
+			$doi = $submission->getCurrentPublication()->getData('pub-id::doi');
+			
+			$registeredDoi = Capsule::table('submission_settings')
+				->where('submission_id', '=', $submissionId)
+				->where('setting_name', '=', 'crossref::registeredDoi')
+				->value('setting_value');
+
+			if(!$doi || !$registeredDoi) continue;
+
+			$failedMsg = Capsule::table('submission_settings')
+						->where('submission_id', '=', $submissionId)
+						->where('setting_name', '=', 'crossref::failedMsg')
+						->value('setting_value');
+
+			$notices = [];
+			$errors = [];
+
+			$chapters = $publication->getData('chapters');
+			$chapterDois = [];
+			foreach ($chapters as $chapter) {
+				if ($chapter->getData('pub-id::doi')){
+					$chapterDois[] = $chapter->getData('pub-id::doi');
+				}
+			}
+
+			// Check for notices and errors:
+			// Notice: No ISBN! Element 'noisbn' will be used in export.
+			// Notice: Crossref failed messages
+			// Notice: No ISSN for series!
+			// Error: No publisher name in Press settings
+
+			$publicationFormats = $publication->getData('publicationFormats');
+			$noIsbn = true;
+			foreach ($publicationFormats as $publicationFormat) {
+				$identificationCodes = $publicationFormat->getIdentificationCodes();
+				while ($identificationCode = $identificationCodes->next()) {
+					if ($identificationCode->getCode() == "02" || $identificationCode->getCode() == "15") {
+						// 02 and 15: ONIX codes for ISBN-10 or ISBN-13
+						$noIsbn = false;
+					}
+				}
+			}
+			if ($noIsbn){
+				$notices[] = __('plugins.importexport.crossref.notice.noIsbn');
+			}
+
+			if ($failedMsg) {
+				 $notices[] = $failedMsg;
+			}
+
+			if (!$username && !$password) {
+				 $errors[] = __('plugins.importexport.crossref.error.noUserCrecentials');
+			}
+
+			if (!$context->getData('publisher')) {
+				 $errors[] = __('plugins.importexport.crossref.error.noPublisher');
+			}
+
+			$seriesDao = DAORegistry::getDAO('SeriesDAO'); /* @var $seriesDao SeriesDAO */
+			if ($series = $seriesDao->getById($publication->getData('seriesId'))){
+				if (!$series->getOnlineISSN() && !$series->getPrintISSN()) {
+					$notices[] = __('plugins.importexport.crossref.error.noIssn');
+				}
+			}
+
+			$itemsDeposited[] = array(
+				'id' => $submissionId,
+				'title' => $submission->getLocalizedTitle($locale),
+				'authors' => $submission->getAuthorString($locale),
+				'pubId' => $doi,
+				'chapterPubIds' => $chapterDois,
+				'notices' => $notices,
+				'errors' => $errors,
+			);
+		}
+
+		$templateMgr->assign('itemsDeposited', $itemsDeposited);
+		$templateMgr->assign('itemsSizeDeposited', $submissionCounts);
+		$templateMgr->assign('currentPage', $page);
+		$templateMgr->assign('itemsPerPage', $itemsPerPage);
+		$templateMgr->assign('totalPages', ceil($submissionCounts / $itemsPerPage));
+		$templateMgr->assign('offset', $offset);
+		$templateMgr->assign('totalShowedItem', $offset + $itemsPerPage);
+		$templateMgr->assign('canClickPrevious', $page > 1);
+		$templateMgr->assign('canClickNext', $page < ceil($submissionCounts / $itemsPerPage));
+		$templateMgr->assign('previousPage', $page - 1);
+		$templateMgr->assign('nextPage', $page + 1);
+		
+		$templateMgr->display($this->getTemplateResource('depositedtab.tpl'));
+	}
 }

@@ -13,91 +13,94 @@ msgstr ""
 
 
 msgid "plugins.importexport.crossref.displayName"
-msgstr "Crossref XML Plugin"
+msgstr "Crossref XML Eklentisi"
 
 msgid "plugins.importexport.crossref.description"
-msgstr "Deposite submissions in OMP's crossref XML format."
+msgstr "OMP'nin crossref XML formatında gönderimleri depolayın."
 
 msgid "plugins.importexport.crossref.deposited"
-msgstr "Deposited"
+msgstr "Yatırıldı"
 
 msgid "plugins.importexport.crossref.depositedSubmissions"
-msgstr "Deposited submissions"
+msgstr "Yatırılan gönderimler"
 
 msgid "plugins.importexport.crossref.deposit"
-msgstr "Deposit"
+msgstr "Yatır"
 
 msgid "plugins.importexport.crossref.export"
-msgstr "Export"
+msgstr "Dışa Aktar"
 
 msgid "plugins.importexport.crossref.error"
-msgstr "Error"
+msgstr "Hata"
 
 msgid "plugins.importexport.crossref.queued"
-msgstr "To Deposit"
+msgstr "Yatırılacak"
 
 msgid "plugins.importexport.crossref.redeposit"
-msgstr "Deposit Again"
+msgstr "Tekrar Yatır"
 
 msgid "plugins.importexport.crossref.submittedSubmissions"
-msgstr "Select monographs to export"
+msgstr "Dışa aktarılacak monografları seçin"
 
 msgid "plugins.importexport.crossref.results"
-msgstr "Results"
+msgstr "Sonuçlar"
+
 
 msgid "plugins.importexport.crossref.settings.description"
-msgstr "Description"
+msgstr "Açıklama"
 
 msgid "plugins.importexport.crossref.intro"
-msgstr "This plugin registers DOIs for monographs and chapters  for DOI provider <a href='https://crossref.org'>Crossref.org</a>."
+msgstr "Bu eklenti, DOI sağlayıcısı <a href='https://crossref.org'>Crossref.org</a> için monograflar ve bölümler için DOI'ları kaydeder."
 
 msgid "plugins.importexport.crossref.settings"
-msgstr "Settings"
+msgstr "Ayarlar"
 
 msgid "plugins.importexport.crossref.settings.form.password"
-msgstr "Password"
+msgstr "Parola"
 
 msgid "plugins.importexport.crossref.settings.form.password.description"
-msgstr "Please note that the password will be saved as plain text, i.e. not encrypted."
+msgstr "Lütfen unutmayın ki parola düz metin olarak kaydedilecektir, yani şifrelenmemiştir."
 
 msgid "plugins.importexport.crossref.settings.form.username"
-msgstr "Crossref username"
+msgstr "Crossref kullanıcı adı"
 
 msgid "plugins.importexport.crossref.settings.form.usernameRequired"
-msgstr "Please enter the username you got from Crossref."
+msgstr "Crossref'ten aldığınız kullanıcı adını giriniz."
+
 
 msgid "plugins.importexport.crossref.settings.form.testMode.description"
-msgstr "Use the Crossref test API for DOI registration. Please do not forget to remove this option for the production."
+msgstr "DOI kaydı için Crossref test API'sini kullanın. Lütfen bunu üretim için bu seçeneği kaldırmayı unutmayın."
 
 msgid "plugins.importexport.crossref.senderTask.name"
-msgstr "Crossref automatic registration task"
+msgstr "Crossref otomatik kayıt görevi"
 
 msgid "plugins.importexport.crossref.register.error.mdsError"
-msgstr "Registration was not fully successful! The DOI registration server returned an error."
+msgstr "Kayıt tam olarak başarılı olmadı! DOI kayıt sunucusu bir hata döndürdü."
 
 msgid "plugins.importexport.crossref.register.success"
-msgstr "Registration was successful!"
+msgstr "Kayıt başarılı oldu!"
 
 msgid "plugins.importexport.crossref.chapterDoiCount"
-msgstr "Chapter DOIs"
+msgstr "Bölüm DOI'ları"
 
 msgid "plugins.importexport.crossref.notice.noIsbn"
-msgstr "Note! No ISBN available. Crossref export will use 'noisbn' selection."
+msgstr "Not! ISBN mevcut değil. Crossref dışa aktarma işlemi 'noisbn' seçeneğini kullanacaktır."
 
 msgid "plugins.importexport.crossref.error.noIssn"
-msgstr "Note! No ISSN available. Crossref export will use 'noissn' selection."
+msgstr "Not! ISSN mevcut değil. Crossref dışa aktarma işlemi 'noissn' seçeneğini kullanacaktır."
 
 msgid "plugins.importexport.crossref.displayName"
-msgstr "Crossref XML Plugin"
+msgstr "Crossref XML Eklentisi"
 
 msgid "plugins.importexport.crossref.monographsOrChapter"
-msgstr "Monographs / Chapters"
+msgstr "Monograflar / Bölümler"
 
 msgid "plugins.importexport.crossref.cliUsage"
 msgstr "<![CDATA[Usage: {$scriptName} {$pluginName} export [outputFileName] [journal_path] {issues|articles|galleys} objectId1 [objectId2] ... {$scriptName} {$pluginName} register [journal_path] {issues|articles|galleys} objectId1 [objectId2] ...]]>"
 
-msgid "plugins.importexport.crossref.error.noUserCrecentials"
-msgstr "The username is not fully set up, please set it in the Settings tab"
+
+msgid "plugins.importexport.crossref.error.noUserCredentials"
+msgstr "Kullanıcı adı tam olarak kurulmamış, lütfen Ayarlar sekmesinde ayarlayın"
 
 msgid "plugins.importexport.crossref.error.noPublisher"
-msgstr "The password is not fully set up, please set it in the Settings tab"
+msgstr "Parola tam olarak kurulmamış, lütfen Ayarlar sekmesinde ayarlayın"
