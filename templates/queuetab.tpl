@@ -40,7 +40,8 @@
                                                     class="-screenReader">ID</span>
                                             </div>
                                             <div class="pkpListPanelItem--submission__title">
-                                                {$item["title"]}<br />
+                                                <a href="{url page="workflow" op="access" path=[$item['id']]}" target="_blank">{$item["title"]}</a>
+                                                <br />
                                                 DOI: {$item["pubId"]}<br />
                                                 {if $item["chapterPubIds"]}
                                                     {translate key="plugins.importexport.crossref.chapterDoiCount"}:
@@ -94,20 +95,34 @@
             <nav role="navigation" aria-label="View additional pages" class="pkpPagination">
                 <ul>
                     <li>
+                        {* <button 
+                            class="pkpButton" 
+                            aria-label="Go to Previous page" 
+                            {if !$canClickPrevious} disabled {/if}
+                            {if $canClickPrevious} 
+                                hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab'] params=['page' => 1]}" 
+                                hx-target="#queue-tab-content"
+                                hx-disabled-elt="this" 
+                                hx-replace-url="{url page="management" op="importexport" path=['plugin', $plugin] params=['queuetab' => 1]}"
+                            {/if}
+                            >
+                            First page
+                        </button> *}
                         <button 
                             class="pkpButton" 
                             aria-label="Go to Previous page" 
                             {if !$canClickPrevious} disabled {/if}
                             {if $canClickPrevious} 
-                                hx-get="{$plugin}/queuetab?page={$previousPage}" 
+                                hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab'] params=['page' => $previousPage]}" 
                                 hx-target="#queue-tab-content"
                                 hx-disabled-elt="this" 
+                                {* hx-replace-url="{url page="management" op="importexport" path=['plugin', $plugin] params=['queuetab' => $previousPage]}" *}
                             {/if}
                             >
                             Previous page
                         </button>
                     </li>
-                    <li style="margin: 10px; font-size:14px;color:#747474;"> {$offset} - {$totalShowedItem} of {$itemsSizeQueue} Submissions</li>
+                    <li style="margin: 10px; font-size:14px;color:#747474;"> {$offset} - {$itemsShowed} of {$submissionCounts} Submissions</li>
                     <li>
                         <button 
                             class="pkpButton" 
@@ -115,13 +130,28 @@
                             id="queue-tab-content"
                             {if !$canClickNext} disabled {/if}
                             {if $canClickNext} 
-                                hx-get="{$plugin}/queuetab?page={$nextPage}" 
+                                hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab'] params=['page' => $nextPage]}"
                                 hx-target="#queue-tab-content"
                                 hx-disabled-elt="this" 
+                                {* hx-replace-url="{url page="management" op="importexport" path=['plugin', $plugin] params=['queuetab' => $nextPage]}" *}
                             {/if}
                             >
                             Next page 
                         </button>
+                        {* <button 
+                            class="pkpButton" 
+                            style="display: flex; align-items:center;"
+                            id="queue-tab-content"
+                            {if !$canClickNext} disabled {/if}
+                            {if $canClickNext} 
+                                hx-get="{$plugin}/queuetab?page={$totalPages}" 
+                                hx-target="#queue-tab-content"
+                                hx-disabled-elt="this" 
+                                hx-replace-url="{url page="management" op="importexport" path=['plugin', $plugin] params=['queuetab' => $nextPage]}"
+                            {/if}
+                            >
+                            Last Page
+                        </button> *}
                     </li>
                 </ul>
             </nav>

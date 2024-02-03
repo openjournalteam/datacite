@@ -55,7 +55,7 @@
             </script>
             <div class="listing" width="100%">
                 <div 
-                    hx-get="{$plugin}/queuetab" 
+                    hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab'] params=['page' => $currentQueuePage]}" 
                     hx-trigger="intersect"
                     hx-swap="innerHTML"
                     id="queue-tab-content"
@@ -72,7 +72,7 @@
             </script>
             <div class="listing" width="100%">
                 <div 
-                    hx-get="{$plugin}/depositedtab" 
+                    hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'depositedtab'] params=['page' => $currentDepositedPage]}" 
                     hx-trigger="intersect"
                     hx-swap="innerHTML"
                     id="deposited-tab-content"

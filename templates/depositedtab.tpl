@@ -40,7 +40,8 @@
                                                 <span class="-screenReader">ID</span>
                                             </div>
                                             <div class="pkpListPanelItem--submission__title">
-                                                {$item["title"]}<br />
+                                                <a href="{url page="workflow" op="access" path=[$item['id']]}" target="_blank">{$item["title"]}</a>
+                                                <br />
                                                 DOI: {$item["pubId"]}<br />
                                                 {if $item["chapterPubIds"]}
                                                     {translate key="plugins.importexport.crossref.chapterDoiCount"}:
@@ -90,7 +91,6 @@
                 </table>
             </div>
         </div>
-        {if $itemsSizeDeposited}
         <div class="listPanel__footer">
             <nav role="navigation" aria-label="View additional pages" class="pkpPagination">
                 <ul>
@@ -108,16 +108,17 @@
                             Previous page
                         </button>
                     </li>
-                    <li style="margin: 10px; font-size:14px;color:#747474;"> {$offset} - {$totalShowedItem} of {$itemsSizeDeposited} Submissions</li>
+                    <li style="margin: 10px; font-size:14px;color:#747474;"> {$offset} - {$itemsShowed} of {$submissionCounts} Submissions</li>
                     <li>
                         <button 
                             class="pkpButton" 
                             style="display: flex; align-items:center;"
                             {if !$canClickNext} disabled {/if}
                             {if $canClickNext} 
-                                hx-get="{$plugin}/depositedtab?page={$nextPage}" 
+                                hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'depositedtab'] params=['page' => $nextPage]}" 
                                 hx-target="#deposited-tab-content"
                                 hx-disabled-elt="this" 
+                                {* hx-replace-url="{url page="management" op="importexport" path=['plugin', $plugin] params=['depositedtab' => $nextPage]}" *}
                             {/if}
                             >
                             Next page 
@@ -126,6 +127,5 @@
                 </ul>
             </nav>
         </div>
-        {/if}
     </div>
 </div>
