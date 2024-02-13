@@ -484,11 +484,12 @@ class CrossrefExportPlugin extends ImportExportPlugin
 
 	public function queuetab($request, $templateMgr)
 	{
+		$querySearch = $request->getUserVar('querySearch');
 		$page = $request->getUserVar('page') ?? 1;
-		$itemsPerPage = 10;
+		$itemsPerPage = 5;
 		$offset = ($page - 1) * $itemsPerPage;
 
-		\HookRegistry::register('Submission::getMany::queryObject', function ($hookName, $args) {
+		\HookRegistry::register('Submission::getMany::queryObject', function ($hookName, $args) use ($querySearch) {
 			$queryBuilder = &$args[0];
 			$queryBuilder
 				->whereIn('s.current_publication_id', function ($query) {
@@ -504,6 +505,16 @@ class CrossrefExportPlugin extends ImportExportPlugin
 						->from('submission_settings')
 						->where('setting_name', '=', 'crossref::registeredDoi');
 				});
+
+			if (!empty($querySearch)) {
+				$queryBuilder->whereIn('s.current_publication_id', function ($query) use ($querySearch) {
+					$query
+						->select('publication_id')
+						->from('publication_settings')
+						->where('setting_name', '=', 'title')
+						->where('setting_value', 'like', '%' . $querySearch .  '%');
+				});
+			}
 		});
 
 		$context = $request->getContext();
@@ -516,8 +527,8 @@ class CrossrefExportPlugin extends ImportExportPlugin
 			'count' => $itemsPerPage,
 			'offset' => $offset,
 		]);
-		
-		
+
+
 		$submissionCounts = $submissions->_resultFactory->getCount();
 		$itemsQueue = [];
 		$locale = AppLocale::getLocale();
@@ -612,20 +623,23 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		$templateMgr->assign('canClickNext', $page < ceil($submissionCounts / $itemsPerPage));
 		$templateMgr->assign('previousPage', $page - 1);
 		$templateMgr->assign('nextPage', $page + 1);
+		$templateMgr->assign('querySearch', $querySearch);
+
 
 		$templateMgr->display($this->getTemplateResource('queuetab.tpl'));
 	}
 
 	public function depositedtab($request, $templateMgr)
 	{
+		$querySearch = $request->getUserVar('querySearch');
 		$page = $request->getUserVar('page') ?? 1;
-		$itemsPerPage = 10;
+		$itemsPerPage = 5;
 		$offset = ($page - 1) * $itemsPerPage;
 
-		\HookRegistry::register('Submission::getMany::queryObject', function ($hookName, $args) {
-			$q = &$args[0];
-			
-			$q
+		\HookRegistry::register('Submission::getMany::queryObject', function ($hookName, $args) use ($querySearch) {
+			$queryBuilder = &$args[0];
+
+			$queryBuilder
 				->whereIn('s.current_publication_id', function ($query) {
 					$query
 						->select('publication_id')
@@ -639,6 +653,16 @@ class CrossrefExportPlugin extends ImportExportPlugin
 						->from('submission_settings')
 						->where('setting_name', '=', 'crossref::registeredDoi');
 				});
+
+			if (!empty($querySearch)) {
+				$queryBuilder->whereIn('s.current_publication_id', function ($query) use ($querySearch) {
+					$query
+						->select('publication_id')
+						->from('publication_settings')
+						->where('setting_name', '=', 'title')
+						->where('setting_value', 'like', '%' . $querySearch .  '%');
+				});
+			}
 		});
 
 		$context = $request->getContext();
@@ -749,6 +773,8 @@ class CrossrefExportPlugin extends ImportExportPlugin
 		$templateMgr->assign('canClickNext', $page < ceil($submissionCounts / $itemsPerPage));
 		$templateMgr->assign('previousPage', $page - 1);
 		$templateMgr->assign('nextPage', $page + 1);
+		$templateMgr->assign('querySearch', $querySearch);
+
 
 		$templateMgr->display($this->getTemplateResource('depositedtab.tpl'));
 	}

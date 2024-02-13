@@ -54,13 +54,43 @@
                     {rdelim});
             </script>
             <div class="listing" width="100%">
-                <div 
-                    hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab'] params=['page' => $currentQueuePage]}" 
-                    hx-trigger="intersect"
-                    hx-swap="innerHTML"
-                    id="queue-tab-content"
-                    >
-                    Loading Table ...
+                <div class="pkp_content_panel pkp_controllers_grid">
+                    <div class="pkpListPanel pkpListPanel--submissions">
+                        <div class="pkpListPanel__body -pkpClearfix pkpListPanel__body--submissions">
+                            <div class="pkpListPanel__content pkpListPanel__content--submissions">
+                                <div class="header" style="display:flex; align-items: center;">
+                                    <h4>
+                                        {translate key="plugins.importexport.crossref.monographsOrChapter"}
+                                    </h4>
+                                    <form 
+                                        style="margin-left: auto;" 
+                                        hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab']}"
+                                        hx-target="#queue-tab-content"
+                                        hx-disabled-elt="this" 
+                                        >
+                                        <div class="pkpSearch">
+                                            <label>
+                                                <span class="-screenReader">Search</span>
+                                                <input type="search" placeholder="Search title..." name="querySearch" class="pkpSearch__input" value="{$querySearch}">
+                                                <span class="pkpSearch__icons">
+                                                    <span aria-hidden="true" class="fa pkpSearch__icons--search fa-search pkpIcon--inline">
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div 
+                                    hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'queuetab']}" 
+                                    hx-trigger="intersect once"
+                                    hx-swap="innerHTML"
+                                    id="queue-tab-content"
+                                    >
+                                    <div style="padding: 1em;">Loading Data ...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -71,13 +101,43 @@
                     {rdelim});
             </script>
             <div class="listing" width="100%">
-                <div 
-                    hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'depositedtab'] params=['page' => $currentDepositedPage]}" 
-                    hx-trigger="intersect"
-                    hx-swap="innerHTML"
-                    id="deposited-tab-content"
-                    >
-                    Loading Table ...
+                <div class="pkp_content_panel pkp_controllers_grid">
+                    <div class="pkpListPanel pkpListPanel--submissions">
+                        <div class="pkpListPanel__body -pkpClearfix pkpListPanel__body--submissions">
+                            <div class="pkpListPanel__content pkpListPanel__content--submissions">
+                                <div class="header" style="display:flex; align-items: center;">
+                                    <h4>
+                                        {translate key="plugins.importexport.crossref.deposited"}
+                                    </h4>
+                                    <form 
+                                        style="margin-left: auto;" 
+                                        hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'depositedtab']}"
+                                        hx-target="#deposited-tab-content"
+                                        hx-disabled-elt="this" 
+                                        >
+                                        <div class="pkpSearch">
+                                            <label>
+                                                <span class="-screenReader">Search</span>
+                                                <input type="search" placeholder="Search title..." name="querySearch" class="pkpSearch__input" value="{$querySearch}">
+                                                <span class="pkpSearch__icons">
+                                                    <span aria-hidden="true" class="fa pkpSearch__icons--search fa-search pkpIcon--inline">
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div 
+                                    hx-get="{url page="management" op="importexport" path=['plugin', $plugin, 'depositedtab']}" 
+                                    hx-trigger="intersect once"
+                                    hx-swap="innerHTML"
+                                    id="deposited-tab-content"
+                                    >
+                                    <div style="padding: 1em;">Loading Data ...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
