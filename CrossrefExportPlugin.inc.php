@@ -507,13 +507,17 @@ class CrossrefExportPlugin extends ImportExportPlugin
 				});
 
 			if (!empty($querySearch)) {
-				$queryBuilder->whereIn('s.current_publication_id', function ($query) use ($querySearch) {
-					$query
-						->select('publication_id')
-						->from('publication_settings')
-						->where('setting_name', '=', 'title')
-						->where('setting_value', 'like', '%' . $querySearch .  '%');
-				});
+				if (filter_var($querySearch, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) !== null) {
+					$queryBuilder->where('s.submission_id', '=', $querySearch);
+				} else {
+					$queryBuilder->whereIn('s.current_publication_id', function ($query) use ($querySearch) {
+						$query
+							->select('publication_id')
+							->from('publication_settings')
+							->where('setting_name', '=', 'title')
+							->where('setting_value', 'like', '%' . $querySearch .  '%');
+					});
+				}
 			}
 		});
 
@@ -655,13 +659,17 @@ class CrossrefExportPlugin extends ImportExportPlugin
 				});
 
 			if (!empty($querySearch)) {
-				$queryBuilder->whereIn('s.current_publication_id', function ($query) use ($querySearch) {
-					$query
-						->select('publication_id')
-						->from('publication_settings')
-						->where('setting_name', '=', 'title')
-						->where('setting_value', 'like', '%' . $querySearch .  '%');
-				});
+				if (filter_var($querySearch, FILTER_VALIDATE_INT, FILTER_NULL_ON_FAILURE) !== null) {
+					$queryBuilder->where('s.submission_id', '=', $querySearch);
+				} else {
+					$queryBuilder->whereIn('s.current_publication_id', function ($query) use ($querySearch) {
+						$query
+							->select('publication_id')
+							->from('publication_settings')
+							->where('setting_name', '=', 'title')
+							->where('setting_value', 'like', '%' . $querySearch .  '%');
+					});
+				}
 			}
 		});
 
